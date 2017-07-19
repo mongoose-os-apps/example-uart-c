@@ -8,10 +8,10 @@
 
 #include "common/mbuf.h"
 #include "common/platform.h"
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_uart.h"
+#include "mgos_app.h"
+#include "mgos_gpio.h"
+#include "mgos_timers.h"
+#include "mgos_uart.h"
 
 #define UART_NO 1
 
