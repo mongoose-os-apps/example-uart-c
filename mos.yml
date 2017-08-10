@@ -1,7 +1,8 @@
-name: c_uart
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-05-18
+author: mongoose-os
+description: UART usage example in C/C++
 
 libs_version: ${mos_version}
 modules_version: ${mos_version}
