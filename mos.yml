@@ -1,6 +1,6 @@
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-05-18
+manifest_version: 2017-05-18
 author: mongoose-os
 description: UART usage example in C/C++
 
