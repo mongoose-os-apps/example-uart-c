@@ -18,7 +18,7 @@ It should work on all supported architectures.
 
  - On ESP8266 UART1 TX is GPIO2. UART1 RX is inaccessible, so it is not
    possible to send anything.
- - On ESP32, by default, UART1 TX is GPIO14 and RX is 13.
+ - On ESP32, by default, UART1 TX is GPIO26 and RX is 25.
  - On CC3200 - 7 and 8 respectively (these are pin numbers, not GPIO).
 
 ## Controlling console output
