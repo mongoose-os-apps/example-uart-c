@@ -17,8 +17,7 @@
 
 #include <stdio.h>
 
-#include "common/mbuf.h"
-#include "common/platform.h"
+#include "mgos.h"
 #include "mgos_app.h"
 #include "mgos_gpio.h"
 #include "mgos_timers.h"
@@ -31,27 +30,42 @@ static void timer_cb(void *arg) {
    * Note: do not use mgos_uart_write to output to console UART (0 in our case).
    * It will work, but output may be scrambled by console debug output.
    */
-  printf("Hello, UART0!\r\n");
-
   mgos_uart_printf(UART_NO, "Hello, UART1!\r\n");
-
   (void) arg;
 }
 
-int esp32_uart_rx_fifo_len(int uart_no);
-
+/*
+ * Dispatcher can be invoked with any amount of data (even none at all) and
+ * at any time. Here we demonstrate how to process input line by line.
+ */
 static void uart_dispatcher(int uart_no, void *arg) {
+  static struct mbuf lb = {0};
   assert(uart_no == UART_NO);
   size_t rx_av = mgos_uart_read_avail(uart_no);
-  if (rx_av > 0) {
-    struct mbuf rxb;
-    mbuf_init(&rxb, 0);
-    mgos_uart_read_mbuf(uart_no, &rxb, rx_av);
-    if (rxb.len > 0) {
-      printf("%.*s", (int) rxb.len, rxb.buf);
-    }
-    mbuf_free(&rxb);
+  if (rx_av == 0) return;
+  mgos_uart_read_mbuf(uart_no, &lb, rx_av);
+  char *nl = (char *) mg_strchr(mg_mk_str_n(lb.buf, lb.len), '\n');
+  if (nl == NULL) return;
+  *nl = '\0';
+  size_t llen = nl - lb.buf;
+  struct mg_str line = mg_mk_str_n(lb.buf, llen);
+  /* Because Windows exists and we love it so much, check for CR as well. */
+  if (nl > lb.buf && *(nl - 1) == '\r') {
+    *(nl - 1) = '\0';
+    line.len--;
   }
+  /*
+   * Now do something useful with "line" which contains the line data,
+   * NUL-terminated for her pleasure.
+   */
+  LOG(LL_INFO, ("UART%d> '%.*s'", uart_no, (int) line.len, line.p));
+  if (mg_vcasecmp(&line, "hi") == 0) {
+    mgos_uart_printf(UART_NO, "Hello!\r\n");
+  } else {
+    mgos_uart_printf(UART_NO, "You said '%.*s'.\r\n", (int) line.len, line.p);
+  }
+  /* Finally, remove the line data from the buffer. */
+  mbuf_remove(&lb, llen + 1);
   (void) arg;
 }
 
@@ -74,6 +88,9 @@ enum mgos_app_init_result mgos_app_init(void) {
 
   mgos_uart_set_dispatcher(UART_NO, uart_dispatcher, NULL /* arg */);
   mgos_uart_set_rx_enabled(UART_NO, true);
+
+  LOG(LL_INFO,
+      ("* Send some data to UART%d (don't forget to press Enter) *", UART_NO));
 
   return MGOS_APP_INIT_SUCCESS;
 }
