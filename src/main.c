@@ -30,7 +30,8 @@ static void timer_cb(void *arg) {
    * Note: do not use mgos_uart_write to output to console UART (0 in our case).
    * It will work, but output may be scrambled by console debug output.
    */
-  mgos_uart_printf(UART_NO, "Hello, UART1!\r\n");
+  static int seq = 0;
+  mgos_uart_printf(UART_NO, "Hello, UART%d! %d\r\n", UART_NO, seq++);
   (void) arg;
 }
 
@@ -44,16 +45,24 @@ static void uart_dispatcher(int uart_no, void *arg) {
   size_t rx_av = mgos_uart_read_avail(uart_no);
   if (rx_av == 0) return;
   mgos_uart_read_mbuf(uart_no, &lb, rx_av);
-  char *nl = (char *) mg_strchr(mg_mk_str_n(lb.buf, lb.len), '\n');
-  if (nl == NULL) return;
-  *nl = '\0';
-  size_t llen = nl - lb.buf;
-  struct mg_str line = mg_mk_str_n(lb.buf, llen);
-  /* Because Windows exists and we love it so much, check for CR as well. */
-  if (nl > lb.buf && *(nl - 1) == '\r') {
-    *(nl - 1) = '\0';
-    line.len--;
+  /* Handle all the wonderful possibilities of different line endings. */
+  struct mg_str b = mg_mk_str_n(lb.buf, lb.len);
+  char *cr = (char *) mg_strchr(b, '\r');
+  char *lf = (char *) mg_strchr(b, '\n');
+  char *le;
+  if (cr == NULL && lf == NULL) {
+    return;
+  } else if (cr != NULL && lf == NULL) {
+    le = cr;
+  } else if (cr == NULL && lf != NULL) {
+    le = lf;
+  } else {
+    le = MIN(cr, lf);
   }
+  *le = '\0';
+  size_t llen = le - lb.buf;
+  if (llen == 0) return;
+  struct mg_str line = mg_mk_str_n(lb.buf, llen);
   /*
    * Now do something useful with "line" which contains the line data,
    * NUL-terminated for her pleasure.
